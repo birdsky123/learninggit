@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.model.StockInfo
 import com.example.core.model.TradeRecord
+import com.example.core.model.Position
 import com.example.core.repository.StockRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,8 @@ data class TradingUiState(
     val tradeType: TradeType = TradeType.BUY,
     val recentTrades: List<TradeRecord> = emptyList(),
     val errorMessage: String? = null,
-    val isTradeSuccessful: Boolean = false
+    val isTradeSuccessful: Boolean = false,
+    val positions: List<Position> = emptyList()
 )
 
 enum class TradeType {
@@ -32,6 +34,7 @@ class TradingViewModel : ViewModel() {
 
     init {
         loadRecentTrades()
+        loadPositions()
     }
 
     fun updateSearchQuery(query: String) {
@@ -137,6 +140,51 @@ class TradingViewModel : ViewModel() {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = "加载交易记录失败"
+                )
+            }
+        }
+    }
+
+    private fun loadPositions() {
+        viewModelScope.launch {
+            try {
+                val mockPositions = listOf(
+                    Position(
+                        stock = StockInfo("贵州茅台", "600519", 1789.99, 2.8),
+                        costPrice = 1650.0,
+                        quantity = 100,
+                        availableQuantity = 100,
+                        marketValue = 178999.0,
+                        profitLoss = 13999.0,
+                        profitLossRate = 8.48
+                    ),
+                    Position(
+                        stock = StockInfo("宁德时代", "300750", 156.78, -1.5),
+                        costPrice = 180.0,
+                        quantity = 500,
+                        availableQuantity = 500,
+                        marketValue = 78390.0,
+                        profitLoss = -11610.0,
+                        profitLossRate = -12.9
+                    ),
+                    Position(
+                        stock = StockInfo("比亚迪", "002594", 245.67, 1.2),
+                        costPrice = 220.0,
+                        quantity = 300,
+                        availableQuantity = 300,
+                        marketValue = 73701.0,
+                        profitLoss = 7701.0,
+                        profitLossRate = 11.67
+                    )
+                )
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    positions = mockPositions
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "加载持仓失败"
                 )
             }
         }

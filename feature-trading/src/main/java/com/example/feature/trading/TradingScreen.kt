@@ -18,11 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.core.model.StockInfo
 import com.example.core.model.TradeRecord
+import com.example.core.model.Position
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,6 +112,11 @@ private fun TradingContent(
             if (uiState.isTradeSuccessful) {
                 SuccessMessage()
             }
+        }
+
+        // 持仓列表
+        item {
+            PositionsSection(positions = uiState.positions)
         }
 
         // 最近交易记录
@@ -405,6 +412,190 @@ private fun SuccessMessage() {
                 color = Color.Green,
                 fontWeight = FontWeight.Medium
             )
+        }
+    }
+}
+
+@Composable
+private fun PositionsSection(positions: List<Position>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "当前持仓",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            
+            if (positions.isEmpty()) {
+                Text(
+                    text = "暂无持仓",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            } else {
+                // 列表式持仓显示，支持横向和竖向滑动
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(positions) { position ->
+                        PositionListItem(position = position)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PositionListItem(position: Position) {
+    Card(
+        modifier = Modifier
+            .width(320.dp)
+            .clickable { /* 可以添加点击事件 */ },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // 第一行：名称/市值
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = position.stock.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = position.stock.code,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = "¥${String.format("%.0f", position.marketValue)}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 第二行：现价/成本
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "现价",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "¥${position.stock.price}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (position.stock.changePercent >= 0) Color.Green else Color.Red
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "成本",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "¥${position.costPrice}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // 第三行：持仓/可用
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "持仓",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${position.quantity}股",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "可用",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${position.availableQuantity}股",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // 第四行：盈亏/盈亏率
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "盈亏",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "¥${String.format("%.0f", position.profitLoss)}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (position.profitLoss >= 0) Color.Green else Color.Red
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "盈亏率",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${String.format("%.2f", position.profitLossRate)}%",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (position.profitLossRate >= 0) Color.Green else Color.Red
+                    )
+                }
+            }
         }
     }
 }

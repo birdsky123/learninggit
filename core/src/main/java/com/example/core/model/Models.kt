@@ -28,5 +28,15 @@ data class UserProfile(
     val totalAssets: Double
 )
 
+data class Position(
+    val stock: StockInfo,
+    val costPrice: Double,
+    val quantity: Int,
+    val availableQuantity: Int,
+    val marketValue: Double,
+    val profitLoss: Double,
+    val profitLossRate: Double
+)
+
 
 
