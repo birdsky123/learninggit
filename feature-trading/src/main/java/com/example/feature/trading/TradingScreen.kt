@@ -42,6 +42,7 @@ fun TradingScreen(viewModel: TradingViewModel = viewModel()) {
         }
     ) { padding ->
         TradingContent(
+            viewModel= viewModel,
             uiState = uiState.value,
             onSearchQueryChange = viewModel::updateSearchQuery,
             onStockSelect = viewModel::selectStock,
@@ -56,6 +57,7 @@ fun TradingScreen(viewModel: TradingViewModel = viewModel()) {
 
 @Composable
 private fun TradingContent(
+    viewModel: TradingViewModel,
     uiState: TradingUiState,
     onSearchQueryChange: (String) -> Unit,
     onStockSelect: (StockInfo) -> Unit,
@@ -116,7 +118,11 @@ private fun TradingContent(
 
         // 持仓列表
         item {
-            PositionsSection(positions = uiState.positions)
+            PositionsSection(
+                positions = uiState.positions,
+                onLoadMore = {viewModel.updateSearchQuery("st")},
+                onRefresh = viewModel::refreshPositions
+            )
         }
 
         // 最近交易记录
@@ -148,7 +154,7 @@ private fun SearchSection(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            
+
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChange,
@@ -157,7 +163,7 @@ private fun SearchSection(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
+
             if (searchResults.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -166,7 +172,7 @@ private fun SearchSection(
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
+
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -248,7 +254,7 @@ private fun TradingForm(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             // 选中的股票信息
             Row(
                 modifier = Modifier
@@ -280,9 +286,9 @@ private fun TradingForm(
                     color = if (selectedStock.changePercent >= 0) Color.Green else Color.Red
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // 交易类型选择
             Text(
                 text = "交易类型",
@@ -290,7 +296,7 @@ private fun TradingForm(
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -303,7 +309,7 @@ private fun TradingForm(
                         MaterialTheme.colorScheme.surfaceVariant
                     }
                     val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
-                    
+
                     Card(
                         modifier = Modifier
                             .weight(1f)
@@ -322,9 +328,9 @@ private fun TradingForm(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // 交易金额输入
             OutlinedTextField(
                 value = tradeAmount,
@@ -334,9 +340,9 @@ private fun TradingForm(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // 执行交易按钮
             Button(
                 onClick = onExecute,
@@ -417,7 +423,11 @@ private fun SuccessMessage() {
 }
 
 @Composable
-private fun PositionsSection(positions: List<Position>) {
+private fun PositionsSection(
+    positions: List<Position>,
+    onLoadMore: () -> Unit,
+    onRefresh: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -427,13 +437,22 @@ private fun PositionsSection(positions: List<Position>) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = "当前持仓",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            
+            // 标题和刷新按钮
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "当前持仓",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = onRefresh) {
+                    Text("刷新", fontSize = 14.sp)
+                }
+            }
+
             if (positions.isEmpty()) {
                 Text(
                     text = "暂无持仓",
@@ -441,13 +460,22 @@ private fun PositionsSection(positions: List<Position>) {
                     modifier = Modifier.padding(vertical = 16.dp)
                 )
             } else {
-                // 列表式持仓显示，支持横向和竖向滑动
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                // 使用LazyColumn实现垂直滚动的持仓列表
+                LazyColumn(
+                    modifier = Modifier.height(400.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     items(positions) { position ->
                         PositionListItem(position = position)
+                    }
+
+                    // 加载更多指示器
+                    item {
+                        LoadMoreIndicator(
+                            onLoadMore = onLoadMore,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
                     }
                 }
             }
@@ -459,7 +487,7 @@ private fun PositionsSection(positions: List<Position>) {
 private fun PositionListItem(position: Position) {
     Card(
         modifier = Modifier
-            .width(320.dp)
+            .fillMaxWidth()
             .clickable { /* 可以添加点击事件 */ },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -494,9 +522,9 @@ private fun PositionListItem(position: Position) {
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // 第二行：现价/成本
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -528,9 +556,9 @@ private fun PositionListItem(position: Position) {
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // 第三行：持仓/可用
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -561,9 +589,9 @@ private fun PositionListItem(position: Position) {
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // 第四行：盈亏/盈亏率
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -617,7 +645,7 @@ private fun RecentTradesSection(trades: List<TradeRecord>) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             if (trades.isEmpty()) {
                 Text(
                     text = "暂无交易记录",
@@ -656,7 +684,7 @@ private fun TradeRecordItem(trade: TradeRecord) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = "¥${trade.amount}",
@@ -667,6 +695,36 @@ private fun TradeRecordItem(trade: TradeRecord) {
                 text = trade.status,
                 fontSize = 12.sp,
                 color = if (trade.status == "成功") Color.Green else Color.Red
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoadMoreIndicator(
+    onLoadMore: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onLoadMore() },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "点击加载更多",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
