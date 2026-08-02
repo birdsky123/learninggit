@@ -1,5 +1,4 @@
 package com.example.feature.home
-
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,8 +33,9 @@ import com.example.core.model.StockInfo
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
-    val uiState = viewModel.uiState.collectAsState()
-
+    val uiState by viewModel.uiState.collectAsState() //添加 by 关键字后，uiState 自动解包，类型从 State<HomeUiState> 变成 HomeUiState
+//    使用 by	val uiState by ...collectAsState()	HomeUiState	⭐⭐⭐⭐⭐
+//    不使用 by	val uiState = ...collectAsState()	State<HomeUiState>	⭐⭐⭐
     Scaffold(
         topBar = {
             TopAppBar(
@@ -46,12 +47,12 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             )
         }
     ) { padding ->
-        HomeContent(uiState = uiState.value, paddingValues = padding)
+        HomeContent(uiState = uiState, paddingValues = padding)
     }
 }
 
 @Composable
-private fun HomeContent(uiState: HomeUiState, paddingValues: PaddingValues = PaddingValues(0.dp)) {
+private fun HomeContent(uiState: HomeUiState, paddingValues: PaddingValues = PaddingValues(10.dp)) {
     if (uiState.isLoading) {
         androidx.compose.foundation.layout.Box(
             modifier = Modifier
@@ -61,13 +62,13 @@ private fun HomeContent(uiState: HomeUiState, paddingValues: PaddingValues = Pad
         ) { CircularProgressIndicator() }
         return
     }
-    uiState.errorMessage?.let { message ->
+    uiState.errorMessage?.let { msgs ->
         androidx.compose.foundation.layout.Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
             contentAlignment = Alignment.Center
-        ) { Text(text = message, color = Color.Red) }
+        ) { Text(text = msgs, color = Color.Red) }
         return
     }
 
@@ -135,9 +136,7 @@ private fun AssetItem(title: String, amount: String) {
 @Composable
 private fun StockCard(stock: StockInfo) {
     Card(
-        modifier = Modifier
-            .padding(end = 8.dp)
-            .padding(bottom = 4.dp).width(10.dp)
+        modifier = Modifier.padding(end = 8.dp).padding(bottom = 4.dp).width(10.dp)
     ) {
         androidx.compose.foundation.layout.Column(
             modifier = Modifier.padding(12.dp)

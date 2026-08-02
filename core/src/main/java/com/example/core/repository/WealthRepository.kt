@@ -1,5 +1,4 @@
 package com.example.core.repository
-
 import com.example.core.model.FinancialProduct
 import kotlinx.coroutines.delay
 

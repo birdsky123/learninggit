@@ -1,5 +1,4 @@
 package com.example.feature.trading
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.model.StockInfo
@@ -35,7 +34,7 @@ enum class TradeType {
 
 class TradingViewModel : ViewModel() {
     private val _uiState: MutableStateFlow<TradingUiState> = MutableStateFlow(TradingUiState(isLoading = true))
-    val uiState: StateFlow<TradingUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<TradingUiState> = _uiState.asStateFlow()  // 只读uiState
 
     init {
         loadRecentTrades()
@@ -197,6 +196,7 @@ class TradingViewModel : ViewModel() {
             }
         }
     }
+
 
     private fun loadRecentTrades() {
         viewModelScope.launch {

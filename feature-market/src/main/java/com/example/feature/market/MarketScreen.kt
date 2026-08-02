@@ -52,9 +52,7 @@ fun MarketScreen() {
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(padding)
+            modifier = Modifier.fillMaxWidth().padding(padding)
         ) {
             MarketIndexRow()
             TabRow(selectedTabIndex = selectedTabIndex) {

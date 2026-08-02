@@ -1,13 +1,15 @@
 package com.example.feature.trading
-
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -18,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,7 +31,6 @@ import com.example.core.model.Position
 @Composable
 fun TradingScreen(viewModel: TradingViewModel = viewModel()) {
     val uiState = viewModel.uiState.collectAsState()
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -56,11 +56,7 @@ fun TradingScreen(viewModel: TradingViewModel = viewModel()) {
 }
 
 @Composable
-private fun TradingContent(
-    viewModel: TradingViewModel,
-    uiState: TradingUiState,
-    onSearchQueryChange: (String) -> Unit,
-    onStockSelect: (StockInfo) -> Unit,
+private fun TradingContent(viewModel: TradingViewModel, uiState: TradingUiState, onSearchQueryChange: (String) -> Unit, onStockSelect: (StockInfo) -> Unit,
     onTradeAmountChange: (String) -> Unit,
     onTradeTypeChange: (TradeType) -> Unit,
     onExecuteTrade: () -> Unit,
@@ -74,6 +70,11 @@ private fun TradingContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // 生命周期计数器
+        item {
+            LifeCycleCounter()
+        }
+
         // 搜索栏
         item {
             SearchSection(
@@ -726,6 +727,27 @@ private fun LoadMoreIndicator(
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+    }
+}
+
+@Composable
+fun LifeCycleCounter() {
+    var count by remember { mutableStateOf(0) }
+    Column {
+        Button(onClick = { count++ }) {
+            Text("Click to plus")
+        }
+        LaunchedEffect(Unit) {
+            Log.d("kang", "onActivity $count")
+        }
+        SideEffect {
+            Log.d("kang", "onChange value $count")
+        }
+        DisposableEffect(Unit) {
+            onDispose {
+                Log.d("kang", "onDispose, value $count")
+            }
         }
     }
 }

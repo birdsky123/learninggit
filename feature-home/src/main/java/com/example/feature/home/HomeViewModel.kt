@@ -1,5 +1,4 @@
 package com.example.feature.home
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.model.FinancialProduct
@@ -31,13 +30,13 @@ class HomeViewModel : ViewModel() {
                 val stocksDeferred = async { StockRepository.getHotStocks() }
                 val productsDeferred = async { StockRepository.getRecommendedProducts() }
 
-                val stocks = stocksDeferred.await()
-                val products = productsDeferred.await()
+                val stocksResult = runCatching { stocksDeferred.await() }.getOrElse { emptyList() }
+                val productsResult = runCatching { productsDeferred.await() }.getOrElse { emptyList() }
 
                 _uiState.value = HomeUiState(
                     isLoading = false,
-                    stocks = stocks,
-                    products = products,
+                    stocks = stocksResult,
+                    products = productsResult,
                     errorMessage = null
                 )
             } catch (e: Exception) {

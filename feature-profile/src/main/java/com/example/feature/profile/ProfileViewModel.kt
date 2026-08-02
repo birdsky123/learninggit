@@ -1,5 +1,4 @@
 package com.example.feature.profile
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.model.UserProfile
