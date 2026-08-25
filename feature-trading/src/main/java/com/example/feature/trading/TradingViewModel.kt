@@ -54,6 +54,24 @@ class TradingViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(selectedStock = stock)
     }
 
+    /** 跨 feature 路由带入股票时预选 */
+    fun preselectFromRoute(code: String?, name: String?) {
+        if (code.isNullOrBlank()) return
+        viewModelScope.launch {
+            val matched = runCatching { StockRepository.getHotStocks() }
+                .getOrDefault(emptyList())
+                .find { it.code.equals(code, ignoreCase = true) }
+            selectStock(
+                matched ?: StockInfo(
+                    name = name?.takeIf { it.isNotBlank() } ?: code,
+                    code = code,
+                    price = 0.0,
+                    changePercent = 0.0
+                )
+            )
+        }
+    }
+
     fun updateTradeAmount(amount: String) {
         _uiState.value = _uiState.value.copy(tradeAmount = amount)
     }

@@ -1,200 +1,350 @@
-package com.example.feature.home
+﻿package com.example.feature.home
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.BusinessCenter
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.core.model.FinancialProduct
-import com.example.core.model.StockInfo
+import com.example.core.navigation.AppDestination
+import com.example.core.navigation.AppRouter
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val UpRed = Color(0xFFE53935)
+private val DownGreen = Color(0xFF26A69A)
+private val PageBg = Color(0xFFF5F5F5)
+
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
-    val uiState by viewModel.uiState.collectAsState() //添加 by 关键字后，uiState 自动解包，类型从 State<HomeUiState> 变成 HomeUiState
-//    使用 by	val uiState by ...collectAsState()	HomeUiState	⭐⭐⭐⭐⭐
-//    不使用 by	val uiState = ...collectAsState()	State<HomeUiState>	⭐⭐⭐
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("金融助手") },
-                actions = {
-                    IconButton(onClick = { }) { Icon(Icons.Default.Search, "搜索") }
-                    IconButton(onClick = { }) { Icon(Icons.Default.Notifications, "通知") }
-                }
-            )
+    val uiState by viewModel.uiState.collectAsState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PageBg)
+    ) {
+        HomeTopBar()
+        when {
+            uiState.isLoading -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) { CircularProgressIndicator(color = UpRed) }
+            uiState.errorMessage != null -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) { Text(text = uiState.errorMessage!!, color = UpRed) }
+            else -> HomeBody()
         }
-    ) { padding ->
-        HomeContent(uiState = uiState, paddingValues = padding)
     }
 }
 
 @Composable
-private fun HomeContent(uiState: HomeUiState, paddingValues: PaddingValues = PaddingValues(10.dp)) {
-    if (uiState.isLoading) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.Center
-        ) { CircularProgressIndicator() }
-        return
-    }
-    uiState.errorMessage?.let { msgs ->
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.Center
-        ) { Text(text = msgs, color = Color.Red) }
-        return
-    }
-
-    LazyColumn(
+private fun HomeTopBar() {
+    Row(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
+            .fillMaxWidth()
+            .background(UpRed)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                androidx.compose.foundation.layout.Column(
-                    modifier = Modifier.padding(16.dp)
+        Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = Color.White)
+        Spacer(modifier = Modifier.width(8.dp))
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(alpha = 0.2f))
+                .clickable { AppRouter.navigate(AppDestination.Market) }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.9f),
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = "股票 | 理财 | 功能", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+        }
+        IconButton(onClick = { }) {
+            Icon(Icons.Default.Settings, contentDescription = "设置", tint = Color.White)
+        }
+        IconButton(onClick = { }) {
+            Icon(Icons.Default.Message, contentDescription = "消息", tint = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun HomeBody() {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 16.dp)
+    ) {
+        item { QuickEntryGrid() }
+        item { PromoBanner() }
+        item { MarketOverviewCard() }
+        item { HotSectorsCard() }
+        item { MarketMovesCard() }
+    }
+}
+
+@Composable
+private fun QuickEntryGrid() {
+    val entries = listOf(
+        Triple("闪电开户", Icons.Default.Bolt, Color(0xFFFF7043)),
+        Triple("业务办理", Icons.Default.BusinessCenter, Color(0xFF42A5F5)),
+        Triple("打新助手", Icons.Default.CardGiftcard, Color(0xFFAB47BC)),
+        Triple("账户分析", Icons.Default.Analytics, Color(0xFF26C6DA)),
+        Triple("条件单", Icons.Default.ShowChart, Color(0xFF66BB6A)),
+        Triple("全部", Icons.Default.Apps, Color(0xFF78909C))
+    )
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            entries.forEach { (title, icon, color) ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .width(64.dp)
+                        .clickable {
+                            when (title) {
+                                "业务办理" -> AppRouter.navigate(AppDestination.Profile)
+                                "条件单", "账户分析" -> AppRouter.navigate(AppDestination.Trading)
+                                "全部" -> AppRouter.navigate(AppDestination.Market)
+                                else -> AppRouter.navigate(AppDestination.Trading)
+                            }
+                        }
                 ) {
-                    Text("总资产", fontSize = 14.sp)
-                    Text("¥128,500.00", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    androidx.compose.foundation.layout.Row(
+                    Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = 8.dp),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(color.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        AssetItem("可用资金", "50,000.00")
-                        AssetItem("持仓市值", "78,500.00")
+                        Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(text = title, fontSize = 12.sp, color = Color(0xFF424242))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PromoBanner() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .clickable { AppRouter.navigate(AppDestination.Trading) },
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "融资融券", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF5D4037))
+                Text(text = "预约开户享专属服务", fontSize = 13.sp, color = Color(0xFF8D6E63))
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(UpRed)
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Text(text = "去开户", color = Color.White, fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MarketOverviewCard() {
+    val indices = listOf(
+        Triple("上证指数", "3,892.35", "+0.82%"),
+        Triple("深证成指", "12,456.78", "-0.35%"),
+        Triple("创业板指", "2,567.89", "+1.24%")
+    )
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "大盘行情", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    text = "查看详情 >",
+                    color = Color.Gray,
+                    fontSize = 13.sp,
+                    modifier = Modifier.clickable { AppRouter.navigate(AppDestination.Market) }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                indices.forEach { (name, value, change) ->
+                    val up = change.startsWith("+")
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = name, fontSize = 12.sp, color = Color.Gray)
+                        Text(text = value, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(text = change, color = if (up) UpRed else DownGreen, fontSize = 13.sp)
                     }
                 }
             }
         }
-        item {
-            SectionTitle("热门行情")
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp)) {
-                items(uiState.stocks) { stock -> StockCard(stock) }
-            }
-        }
-        item {
-            SectionTitle("推荐理财")
-            androidx.compose.foundation.layout.Column(Modifier.padding(horizontal = 16.dp)) {
-                uiState.products.forEach { product -> ProductCard(product) }
-            }
-        }
     }
 }
 
 @Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        modifier = Modifier.padding(16.dp),
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold
+private fun HotSectorsCard() {
+    val sectors = listOf(
+        "人工智能" to "+3.2%",
+        "新能源车" to "+2.1%",
+        "半导体" to "-0.8%",
+        "白酒" to "+1.5%"
     )
-}
-
-@Composable
-private fun AssetItem(title: String, amount: String) {
-    androidx.compose.foundation.layout.Column {
-        Text(title, fontSize = 12.sp, color = Color.Gray)
-        Text("¥$amount", fontSize = 16.sp)
-    }
-}
-
-@Composable
-private fun StockCard(stock: StockInfo) {
-    Card(
-        modifier = Modifier.padding(end = 8.dp).padding(bottom = 4.dp).width(10.dp)
-    ) {
-        androidx.compose.foundation.layout.Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-            Text(stock.name, fontWeight = FontWeight.Bold)
-            Text(stock.code, fontSize = 12.sp, color = Color.Gray)
-            Text(
-                "¥${stock.price}",
-                fontSize = 16.sp,
-                color = if (stock.changePercent >= 0) Color(0xFF00C853) else Color(0xFFD32F2F)
-            )
-            Text(
-                "${if (stock.changePercent >= 0) "+" else ""}${stock.changePercent}%",
-                color = if (stock.changePercent >= 0) Color(0xFF00C853) else Color(0xFFD32F2F)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ProductCard(product: FinancialProduct) {
     Card(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 4.dp)
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxSize(),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            androidx.compose.foundation.layout.Column {
-                Text(product.name, fontWeight = FontWeight.Bold)
-                Text(
-                    "${product.period} | ${product.riskLevel}",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-            androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    "${product.expectedReturn}%",
-                    color = Color(0xFFE65100),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text("预期年化", fontSize = 12.sp, color = Color.Gray)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = "热点板块", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                sectors.forEach { (name, change) ->
+                    val up = change.startsWith("+")
+                    Column(
+                        modifier = Modifier
+                            .width(100.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF5F5F5))
+                            .clickable { AppRouter.navigate(AppDestination.Market) }
+                            .padding(12.dp)
+                    ) {
+                        Text(text = name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            text = change,
+                            color = if (up) UpRed else DownGreen,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-
-
-
-
-
-
-
+@Composable
+private fun MarketMovesCard() {
+    val moves = listOf(
+        "贵州茅台拉升涨超2%" to "14:32",
+        "宁德时代放量下跌" to "14:28",
+        "沪指重回3900点" to "14:15"
+    )
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "大盘异动", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Icon(Icons.Default.TrendingUp, contentDescription = null, tint = UpRed, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            moves.forEach { (title, time) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            AppRouter.navigate(AppDestination.TradeStock("600519", "贵州茅台"))
+                        }
+                        .padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = title, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Text(text = time, fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+        }
+    }
+}

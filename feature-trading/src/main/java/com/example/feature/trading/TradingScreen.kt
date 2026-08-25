@@ -1,385 +1,171 @@
 package com.example.feature.trading
-import android.util.Log
+
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.core.model.StockInfo
-import com.example.core.model.TradeRecord
-import com.example.core.model.Position
+import com.example.core.navigation.AppDestination
+import com.example.core.navigation.AppRouter
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TradingScreen(viewModel: TradingViewModel = viewModel()) {
-    val uiState = viewModel.uiState.collectAsState()
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("交易中心") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
-    ) { padding ->
-        TradingContent(
-            viewModel= viewModel,
-            uiState = uiState.value,
-            onSearchQueryChange = viewModel::updateSearchQuery,
-            onStockSelect = viewModel::selectStock,
-            onTradeAmountChange = viewModel::updateTradeAmount,
-            onTradeTypeChange = viewModel::setTradeType,
-            onExecuteTrade = viewModel::executeTrade,
-            onClearError = viewModel::clearError,
-            paddingValues = padding
-        )
-    }
-}
+private val UpRed = Color(0xFFE53935)
+private val PageBg = Color(0xFFF5F5F5)
+private val WarningBg = Color(0xFFFFF8E1)
 
 @Composable
-private fun TradingContent(viewModel: TradingViewModel, uiState: TradingUiState, onSearchQueryChange: (String) -> Unit, onStockSelect: (StockInfo) -> Unit,
-    onTradeAmountChange: (String) -> Unit,
-    onTradeTypeChange: (TradeType) -> Unit,
-    onExecuteTrade: () -> Unit,
-    onClearError: () -> Unit,
-    paddingValues: PaddingValues
+fun TradingScreen(
+    stockCode: String? = null,
+    stockName: String? = null,
+    viewModel: TradingViewModel = viewModel()
 ) {
-    LazyColumn(
+    var accountTab by remember { mutableIntStateOf(0) }
+    LaunchedEffect(stockCode, stockName) {
+        viewModel.preselectFromRoute(stockCode, stockName)
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(PageBg)
     ) {
-        // 生命周期计数器
-        item {
-            LifeCycleCounter()
-        }
-
-        // 搜索栏
-        item {
-            SearchSection(
-                query = uiState.searchQuery,
-                onQueryChange = onSearchQueryChange,
-                searchResults = uiState.searchResults,
-                onStockSelect = onStockSelect
-            )
-        }
-
-        // 交易表单
-        item {
-            if (uiState.selectedStock != null) {
-                TradingForm(
-                    selectedStock = uiState.selectedStock,
-                    tradeAmount = uiState.tradeAmount,
-                    tradeType = uiState.tradeType,
-                    onAmountChange = onTradeAmountChange,
-                    onTypeChange = onTradeTypeChange,
-                    onExecute = onExecuteTrade,
-                    isLoading = uiState.isLoading
-                )
-            }
-        }
-
-        // 错误提示
-        item {
-            uiState.errorMessage?.let { error ->
-                ErrorMessage(
-                    message = error,
-                    onDismiss = onClearError
-                )
-            }
-        }
-
-        // 成功提示
-        item {
-            if (uiState.isTradeSuccessful) {
-                SuccessMessage()
-            }
-        }
-
-        // 持仓列表
-        item {
-            PositionsSection(
-                positions = uiState.positions,
-                onLoadMore = {viewModel.updateSearchQuery("st")},
-                onRefresh = viewModel::refreshPositions
-            )
-        }
-
-        // 最近交易记录
-        item {
-            RecentTradesSection(trades = uiState.recentTrades)
-        }
-    }
-}
-
-@Composable
-private fun SearchSection(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    searchResults: List<StockInfo>,
-    onStockSelect: (StockInfo) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        AccountTabs(accountTab) { accountTab = it }
+        WarningBanner()
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            Text(
-                text = "搜索股票",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                label = { Text("输入股票代码或名称") },
-                leadingIcon = { Icon(Icons.Default.Search, "搜索") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            if (searchResults.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "搜索结果",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(searchResults) { stock ->
-                        StockChip(
-                            stock = stock,
-                            onClick = { onStockSelect(stock) }
-                        )
-                    }
+            item {
+                if (!stockCode.isNullOrBlank()) {
+                    SelectedStockBanner(stockCode, stockName.orEmpty())
                 }
             }
+            item { LoginCard() }
+            item { TradeActionGrid() }
+            item { AnalysisBanner() }
+            item { FeatureTiles() }
+            item { HkConnectRow() }
         }
     }
 }
 
 @Composable
-private fun StockChip(
-    stock: StockInfo,
-    onClick: () -> Unit
-) {
+private fun AccountTabs(selected: Int, onSelect: (Int) -> Unit) {
+    val tabs = listOf("普通", "信用", "期权")
+    TabRow(
+        selectedTabIndex = selected,
+        containerColor = Color.White,
+        contentColor = UpRed,
+        indicator = { positions ->
+            TabRowDefaults.SecondaryIndicator(
+                Modifier.tabIndicatorOffset(positions[selected]),
+                color = UpRed
+            )
+        }
+    ) {
+        tabs.forEachIndexed { index, title ->
+            Tab(
+                selected = selected == index,
+                onClick = { onSelect(index) },
+                text = {
+                    Text(
+                        title,
+                        fontWeight = if (selected == index) FontWeight.Bold else FontWeight.Normal,
+                        color = if (selected == index) UpRed else Color.Gray
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun WarningBanner() {
+    Text(
+        text = "当前系统清算中，资产及盈亏数据可能存在不准确的情况",
+        color = Color(0xFF8D6E63),
+        fontSize = 12.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(WarningBg)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun SelectedStockBanner(code: String, name: String) {
     Card(
         modifier = Modifier
-            .clickable { onClick() }
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(8.dp)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+            .fillMaxWidth()
+            .padding(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Text("已选标的：", fontSize = 13.sp, color = Color.Gray)
             Text(
-                text = stock.name,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = stock.code,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "¥${stock.price}",
-                fontSize = 16.sp,
+                if (name.isBlank()) code else "$name ($code)",
                 fontWeight = FontWeight.Bold,
-                color = if (stock.changePercent >= 0) Color.Green else Color.Red
+                color = UpRed,
+                fontSize = 14.sp
             )
         }
     }
 }
 
 @Composable
-private fun TradingForm(
-    selectedStock: StockInfo,
-    tradeAmount: String,
-    tradeType: TradeType,
-    onAmountChange: (String) -> Unit,
-    onTypeChange: (TradeType) -> Unit,
-    onExecute: () -> Unit,
-    isLoading: Boolean
-) {
+private fun LoginCard() {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "交易信息",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            // 选中的股票信息
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant,
-                        RoundedCornerShape(8.dp)
-                    )
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = selectedStock.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = selectedStock.code,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = "¥${selectedStock.price}",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (selectedStock.changePercent >= 0) Color.Green else Color.Red
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 交易类型选择
-            Text(
-                text = "交易类型",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                TradeType.values().forEach { type ->
-                    val isSelected = tradeType == type
-                    val backgroundColor = if (isSelected) {
-                        if (type == TradeType.BUY) Color.Green else Color.Red
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
-                    val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
-
-                    Card(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onTypeChange(type) },
-                        colors = CardDefaults.cardColors(containerColor = backgroundColor)
-                    ) {
-                        Text(
-                            text = if (type == TradeType.BUY) "买入" else "卖出",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            color = textColor,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 交易金额输入
-            OutlinedTextField(
-                value = tradeAmount,
-                onValueChange = onAmountChange,
-                label = { Text("交易金额 (元)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 执行交易按钮
-            Button(
-                onClick = onExecute,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading && tradeAmount.isNotEmpty(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (tradeType == TradeType.BUY) Color.Green else Color.Red
-                )
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(
-                    text = if (tradeType == TradeType.BUY) "确认买入" else "确认卖出",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ErrorMessage(
-    message: String,
-    onDismiss: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Red.copy(alpha = 0.1f)
-        )
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
             modifier = Modifier
@@ -388,95 +174,132 @@ private fun ErrorMessage(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text("登录查看资产持仓", fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Text(
-                text = message,
-                color = Color.Red,
-                modifier = Modifier.weight(1f)
+                "立即登录 >",
+                color = UpRed,
+                fontSize = 14.sp,
+                modifier = Modifier.clickable { AppRouter.navigate(AppDestination.Profile) }
             )
-            TextButton(onClick = onDismiss) {
-                Text("关闭", color = Color.Red)
+        }
+    }
+}
+
+@Composable
+private fun TradeActionGrid() {
+    val actions = listOf(
+        Triple("买", Icons.Default.ShoppingCart, UpRed),
+        Triple("卖", Icons.Default.SwapHoriz, Color(0xFF26A69A)),
+        Triple("撤", Icons.Default.Undo, Color(0xFF42A5F5)),
+        Triple("持", Icons.Default.Inventory, Color(0xFFFFA726)),
+        Triple("委托查询", Icons.Default.ListAlt, Color(0xFF5C6BC0)),
+        Triple("成交查询", Icons.Default.ReceiptLong, Color(0xFF26C6DA)),
+        Triple("综合查询", Icons.Default.QueryStats, Color(0xFF66BB6A)),
+        Triple("银证转账", Icons.Default.AccountBalance, Color(0xFFEC407A))
+    )
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            actions.chunked(4).forEach { row ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    row.forEach { (title, icon, color) ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .width(72.dp)
+                                .clickable {
+                                    when (title) {
+                                        "买", "卖", "撤", "持" -> { /* stay on trading */ }
+                                        else -> AppRouter.navigate(AppDestination.Profile)
+                                    }
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(color.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(icon, title, tint = color, modifier = Modifier.size(22.dp))
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            Text(title, fontSize = 12.sp)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SuccessMessage() {
+private fun AnalysisBanner() {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Green.copy(alpha = 0.1f)
-        )
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)
+            .clickable { AppRouter.navigate(AppDestination.Profile) },
+        colors = CardDefaults.cardColors(containerColor = UpRed),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "✅ 交易成功！",
-                color = Color.Green,
-                fontWeight = FontWeight.Medium
-            )
+            Text("普通账户盈亏分析", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("去看看 >", color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
         }
     }
 }
 
 @Composable
-private fun PositionsSection(
-    positions: List<Position>,
-    onLoadMore: () -> Unit,
-    onRefresh: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+private fun FeatureTiles() {
+    val tiles = listOf(
+        Triple("今日打新", "新股 1 · 新债 0", Icons.Default.ReceiptLong),
+        Triple("智能条件单", "策略下单更高效", Icons.Default.SmartToy),
+        Triple("通用回购", "利率 1.435%", Icons.Default.AccountBalance),
+        Triple("T0策略交易", "盘中快进快出", Icons.Default.SwapHoriz)
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            // 标题和刷新按钮
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        tiles.chunked(2).forEach { col ->
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "当前持仓",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                TextButton(onClick = onRefresh) {
-                    Text("刷新", fontSize = 14.sp)
-                }
-            }
-
-            if (positions.isEmpty()) {
-                Text(
-                    text = "暂无持仓",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
-            } else {
-                // 使用LazyColumn实现垂直滚动的持仓列表
-                LazyColumn(
-                    modifier = Modifier.height(400.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(positions) { position ->
-                        PositionListItem(position = position)
-                    }
-
-                    // 加载更多指示器
-                    item {
-                        LoadMoreIndicator(
-                            onLoadMore = onLoadMore,
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
+                col.forEach { (title, subtitle, icon) ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(icon, null, tint = UpRed, modifier = Modifier.size(28.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(title, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                Text(subtitle, fontSize = 11.sp, color = Color.Gray)
+                            }
+                        }
                     }
                 }
             }
@@ -485,269 +308,23 @@ private fun PositionsSection(
 }
 
 @Composable
-private fun PositionListItem(position: Position) {
+private fun HkConnectRow() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* 可以添加点击事件 */ },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(12.dp)
+            .clickable { AppRouter.navigate(AppDestination.Market) },
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            // 第一行：名称/市值
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = position.stock.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = position.stock.code,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = "¥${String.format("%.0f", position.marketValue)}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 第二行：现价/成本
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "现价",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "¥${position.stock.price}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (position.stock.changePercent >= 0) Color.Green else Color.Red
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "成本",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "¥${position.costPrice}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 第三行：持仓/可用
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "持仓",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${position.quantity}股",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "可用",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${position.availableQuantity}股",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 第四行：盈亏/盈亏率
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "盈亏",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "¥${String.format("%.0f", position.profitLoss)}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (position.profitLoss >= 0) Color.Green else Color.Red
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "盈亏率",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${String.format("%.2f", position.profitLossRate)}%",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (position.profitLossRate >= 0) Color.Green else Color.Red
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecentTradesSection(trades: List<TradeRecord>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "最近交易记录",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            if (trades.isEmpty()) {
-                Text(
-                    text = "暂无交易记录",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
-            } else {
-                trades.forEach { trade ->
-                    TradeRecordItem(trade = trade)
-                    if (trade != trades.last()) {
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TradeRecordItem(trade: TradeRecord) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = trade.type,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (trade.type == "买入") Color.Green else Color.Red
-            )
-            Text(
-                text = trade.time,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = "¥${trade.amount}",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = trade.status,
-                fontSize = 12.sp,
-                color = if (trade.status == "成功") Color.Green else Color.Red
-            )
-        }
-    }
-}
-
-@Composable
-private fun LoadMoreIndicator(
-    onLoadMore: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onLoadMore() },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            contentAlignment = Alignment.Center
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "点击加载更多",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
-
-@Composable
-fun LifeCycleCounter() {
-    var count by remember { mutableStateOf(0) }
-    Column {
-        Button(onClick = { count++ }) {
-            Text("Click to plus")
-        }
-        LaunchedEffect(Unit) {
-            Log.d("kang", "onActivity $count")
-        }
-        SideEffect {
-            Log.d("kang", "onChange value $count")
-        }
-        DisposableEffect(Unit) {
-            onDispose {
-                Log.d("kang", "onDispose, value $count")
-            }
+            Text("港股通交易", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
         }
     }
 }
