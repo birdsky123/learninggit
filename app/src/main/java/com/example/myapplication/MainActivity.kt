@@ -1,8 +1,10 @@
 package com.example.myapplication
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -13,11 +15,14 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.view.WindowCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -41,7 +46,16 @@ import java.nio.charset.StandardCharsets
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(
+                lightScrim = android.graphics.Color.TRANSPARENT,
+                darkScrim = android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
+        )
         setContent {
             MyApplicationTheme {
                 MainScreen()
@@ -59,17 +73,27 @@ class MainActivity : ComponentActivity() {
     fun MainScreen() {
         val navController = rememberNavController()
         BindAppRouter(navController)
+
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentBase = AppRoutes.baseRoute(navBackStackEntry?.destination?.route)
+        // 红顶页用浅色状态栏图标；白顶页用深色图标
+        val lightStatusIcons = currentBase in setOf(
+            AppRoutes.HOME,
+            AppRoutes.MARKET,
+            AppRoutes.PROFILE
+        )
+        StatusBarIconStyle(lightIcons = lightStatusIcons)
+
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
-            bottomBar = {
-                BottomNavigationBar(navController)
-            }
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            bottomBar = { BottomNavigationBar(navController) }
         ) { innerPadding ->
             NavHost(
                 navController = navController,
                 startDestination = AppRoutes.HOME,
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 composable(AppRoutes.HOME) { HomeScreen() }
                 composable(AppRoutes.MARKET) { MarketScreen() }
@@ -93,6 +117,17 @@ class MainActivity : ComponentActivity() {
                 composable(AppRoutes.WEALTH) { WealthScreen() }
                 composable(AppRoutes.PROFILE) { ProfileScreen() }
             }
+        }
+    }
+
+    /** lightIcons=true → 白色状态栏文字/图标（适配红顶） */
+    @Composable
+    private fun StatusBarIconStyle(lightIcons: Boolean) {
+        val view = LocalView.current
+        DisposableEffect(lightIcons) {
+            val window = (view.context as ComponentActivity).window
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !lightIcons
+            onDispose { }
         }
     }
 
@@ -130,7 +165,9 @@ class MainActivity : ComponentActivity() {
                     icon = { Icon(item.icon, contentDescription = item.title) },
                     label = { Text(item.title) },
                     selected = currentBase == item.route,
-                    onClick = { AppRouter.navigate(item.destination) },
+                    onClick = {
+                        AppRouter.navigate(item.destination)
+                              },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = red,
                         selectedTextColor = red,

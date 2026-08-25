@@ -1,5 +1,4 @@
 ﻿package com.example.feature.home
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -21,15 +21,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.BusinessCenter
-import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,11 +43,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -54,6 +61,12 @@ import com.example.core.navigation.AppRouter
 private val UpRed = Color(0xFFE53935)
 private val DownGreen = Color(0xFF26A69A)
 private val PageBg = Color(0xFFF5F5F5)
+
+private data class QuickEntry(
+    val title: String,
+    val icon: ImageVector,
+    val color: Color
+)
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
@@ -84,6 +97,7 @@ private fun HomeTopBar() {
         modifier = Modifier
             .fillMaxWidth()
             .background(UpRed)
+            .statusBarsPadding()
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -131,59 +145,98 @@ private fun HomeBody() {
 }
 
 @Composable
-private fun QuickEntryGrid() {
-    val entries = listOf(
-        Triple("闪电开户", Icons.Default.Bolt, Color(0xFFFF7043)),
-        Triple("业务办理", Icons.Default.BusinessCenter, Color(0xFF42A5F5)),
-        Triple("打新助手", Icons.Default.CardGiftcard, Color(0xFFAB47BC)),
-        Triple("账户分析", Icons.Default.Analytics, Color(0xFF26C6DA)),
-        Triple("条件单", Icons.Default.ShowChart, Color(0xFF66BB6A)),
-        Triple("全部", Icons.Default.Apps, Color(0xFF78909C))
-    )
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(1.dp)
+private fun QuickEntryGrid(
+    entries: List<QuickEntry> = defaultQuickEntries,
+    columnsPerRow: Int = 5
+) {
+    val rows = remember(entries, columnsPerRow) {
+        entries.chunked(columnsPerRow.coerceAtLeast(1))
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            entries.forEach { (title, icon, color) ->
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .width(64.dp)
-                        .clickable {
-                            when (title) {
-                                "业务办理" -> AppRouter.navigate(AppDestination.Profile)
-                                "条件单", "账户分析" -> AppRouter.navigate(AppDestination.Trading)
-                                "全部" -> AppRouter.navigate(AppDestination.Market)
-                                else -> AppRouter.navigate(AppDestination.Trading)
-                            }
-                        }
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(color.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(text = title, fontSize = 12.sp, color = Color(0xFF424242))
-                }
-            }
+        rows.forEach { row ->
+            QuickEntryRow(entries = row, columns = columnsPerRow)
         }
     }
 }
+
+@Composable
+private fun QuickEntryRow(entries: List<QuickEntry>, columns: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        entries.forEach { entry ->
+            QuickEntryItem(
+                entry = entry,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        // 最后一行不足 columns 时补空位，保持列宽与上行一致
+        val emptySlots = (columns - entries.size).coerceAtLeast(0)
+        repeat(emptySlots) {
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun QuickEntryItem(entry: QuickEntry, modifier: Modifier = Modifier) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clickable {
+                when (entry.title) {
+                    "业务办理" -> AppRouter.navigate(AppDestination.Profile)
+                    "账户分析", "走势预测", "云参选股", "趋势九转" ->
+                        AppRouter.navigate(AppDestination.Trading)
+                    "全部", "投教专区", "投顾专区" ->
+                        AppRouter.navigate(AppDestination.Market)
+                    else -> AppRouter.navigate(AppDestination.Trading)
+                }
+            }
+            .padding(horizontal = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(entry.color.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                entry.icon,
+                contentDescription = entry.title,
+                tint = entry.color,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = entry.title,
+            fontSize = 11.sp,
+            color = Color(0xFF424242),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private val defaultQuickEntries = listOf(
+    QuickEntry("闪电开户", Icons.Default.Bolt, Color(0xFFFF7043)),
+    QuickEntry("业务办理", Icons.Default.BusinessCenter, Color(0xFF42A5F5)),
+    QuickEntry("投顾专区", Icons.Default.People, Color(0xFF5C6BC0)),
+    QuickEntry("趋势九转", Icons.Default.ShowChart, Color(0xFFEF5350)),
+    QuickEntry("投教专区", Icons.Default.School, Color(0xFF26A69A)),
+    QuickEntry("账户分析", Icons.Default.Analytics, Color(0xFF26C6DA)),
+    QuickEntry("走势预测", Icons.Default.Timeline, Color(0xFF66BB6A)),
+    QuickEntry("云参选股", Icons.Default.Cloud, Color(0xFFAB47BC)),
+    QuickEntry("全部", Icons.Default.MoreHoriz, Color(0xFF78909C))
+)
 
 @Composable
 private fun PromoBanner() {
